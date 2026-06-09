@@ -2,7 +2,7 @@
     "name": "dept-of-scrapyard-robotics/lis3dx",
     "description": "Drive LIS3DH and LIS3DSH motion sensors over I2C/SPI with PHP",
     "type": "library",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "keywords": [
         "framework",
         "scrapyard-io"
@@ -22,10 +22,10 @@
         "scrapyard-io/bare-metal": "^0.4.0"
     },
     "suggest": {
-        "scrapyard-io/gpio": "^0.3.0 - For direct linux-based GPIO",
-        "scrapyard-io/i2c": "^0.3.0 - For direct linux-based I2C",
-        "scrapyard-io/spi": "^0.3.0 - For direct linux-based SPI",
-        "scrapyard-io/mpsse": "^0.3.0 - For I2C/SPI/GPIO over an FTDI Serial-to-USB Device"
+        "scrapyard-io/gpio": "^0.4.0 - For direct linux-based GPIO",
+        "scrapyard-io/i2c": "^0.4.0 - For direct linux-based I2C",
+        "scrapyard-io/spi": "^0.4.0 - For direct linux-based SPI",
+        "scrapyard-io/mpsse": "^0.4.0 - For I2C/SPI/GPIO over an FTDI Serial-to-USB Device"
     },
     "autoload": {
         "psr-4": {

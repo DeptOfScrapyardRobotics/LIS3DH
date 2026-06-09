@@ -354,6 +354,9 @@ resolution. Use `G8` or `G16` when measuring strong impacts or vibration.
 The getters and setters in this API interface with the device directly (register reads/writes),
 so you can use property access while still working against the sensor itself.
 
+> The properties documented in this section are for the **LIS3DH**. The LIS3DSH exposes a
+> different register set — see [LIS3DSH Sensor API](#lis3dsh-sensor-api) below.
+
 Readable Properties (Getters)
 -----------------------------
 
@@ -657,3 +660,233 @@ Writable Properties (Setters)
 * `$sensor->tapped = true;`
   Convenience setter. Configures default single-tap detection and enables the click interrupt
   on INT1.
+
+## LIS3DSH Sensor API
+
+The LIS3DSH follows the same property-access pattern as the LIS3DH: every getter and setter
+reads from or writes to the device directly. Multi-setting registers are broken out into
+`DataObjects` (CTRL_REG1–6, FIFO_CTRL, STATUS) and fields that only accept specific values
+are enum-backed.
+
+```php
+use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DSH\LIS3DSH;
+use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DSH\Enums\LIS3DSHI2CAddress;
+use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DSH\Enums\LIS3DSHFullScale;
+use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DSH\Enums\LIS3DSHOutputDataRate;
+
+$sensor = LIS3DSH::connection('native')
+    ->i2c(1, LIS3DSHI2CAddress::SDO_ENERGIZED->value)
+    ->create();
+
+[$x, $y, $z] = $sensor->acceleration;
+
+$sensor->full_scale = LIS3DSHFullScale::G4;
+$sensor->output_data_rate = LIS3DSHOutputDataRate::HZ400;
+```
+
+Readable Properties (Getters)
+-----------------------------
+
+* `$sensor->device_id`
+  Reads and returns the LIS3DSH device ID. Should return `0x3F`.
+
+* `$sensor->acceleration`
+  Reads all three axes and returns a `[x, y, z]` array in m/s².
+
+* `$sensor->raw_x`, `$sensor->raw_y`, `$sensor->raw_z`
+  Returns the signed 16-bit raw output for a single axis (no scaling applied).
+
+* `$sensor->temperature`
+  Reads OUT_T and returns the die temperature in °C (8-bit, referenced to a +25 °C bias).
+
+* `$sensor->data_ready`
+  Returns `true` when a new X/Y/Z sample set is available (STATUS ZYXDA bit).
+
+* `$sensor->status`
+  Reads and returns the full `LIS3DSHStatusRegister` data object (per-axis data-available
+  and overrun flags).
+
+* `$sensor->output_data_rate`
+  Returns the current `LIS3DSHOutputDataRate`.
+  Possible values: `POWER_DOWN`, `HZ3_125`, `HZ6_25`, `HZ12_5`, `HZ25`, `HZ50`, `HZ100`,
+  `HZ400`, `HZ800`, `HZ1600`.
+
+* `$sensor->block_data_update`
+  Returns `true` if block data update is enabled (output registers not updated until both
+  MSB and LSB have been read).
+
+* `$sensor->x_axis_enabled`, `$sensor->y_axis_enabled`, `$sensor->z_axis_enabled`
+  Returns `true` if the respective axis is active.
+
+* `$sensor->full_scale`
+  Returns the current `LIS3DSHFullScale` measurement range.
+  Possible values: `G2`, `G4`, `G6`, `G8`, `G16`.
+
+* `$sensor->anti_aliasing_bandwidth`
+  Returns the current `LIS3DSHAntiAliasingBandwidth` filter setting.
+  Possible values: `HZ800`, `HZ200`, `HZ400`, `HZ50`.
+
+* `$sensor->self_test`
+  Returns the current `LIS3DSHSelfTest` mode.
+  Possible values: `NORMAL`, `POSITIVE`, `NEGATIVE`, `NOT_ALLOWED`.
+
+* `$sensor->spi_3wire_mode`
+  Returns `true` if 3-wire SPI mode (SIM) is enabled.
+
+* `$sensor->data_ready_on_int1`
+  Returns `true` if the DRDY signal is routed to INT1 (CTRL_REG3 DR_EN).
+
+* `$sensor->interrupts_active_high`
+  Returns `true` if interrupt signals are active-high (CTRL_REG3 IEA).
+
+* `$sensor->interrupts_pulsed`
+  Returns `true` if interrupt signals are pulsed rather than latched (CTRL_REG3 IEL).
+
+* `$sensor->int1_enabled`
+  Returns `true` if the INT1/DRDY signal is enabled.
+
+* `$sensor->int2_enabled`
+  Returns `true` if the INT2 signal is enabled.
+
+* `$sensor->vector_filter_enabled`
+  Returns `true` if the vector filter is enabled (CTRL_REG3 VFILT).
+
+* `$sensor->fifo_enabled`
+  Returns `true` if the FIFO buffer is enabled.
+
+* `$sensor->watermark_enabled`
+  Returns `true` if FIFO watermark level use is enabled.
+
+* `$sensor->address_auto_increment`
+  Returns `true` if the sub-address auto-increments during multi-byte access (ADD_INC).
+  This must stay enabled for burst reads of the output registers.
+
+* `$sensor->int1_fifo_empty_enabled`
+  Returns `true` if the FIFO empty indication is routed to INT1.
+
+* `$sensor->int1_fifo_watermark_enabled`
+  Returns `true` if the FIFO watermark interrupt is routed to INT1.
+
+* `$sensor->int1_fifo_overrun_enabled`
+  Returns `true` if the FIFO overrun interrupt is routed to INT1.
+
+* `$sensor->int2_boot_enabled`
+  Returns `true` if the BOOT interrupt is routed to INT2.
+
+* `$sensor->sm1_enabled`, `$sensor->sm2_enabled`
+  Returns `true` if state machine 1 / 2 is enabled.
+
+* `$sensor->sm1_hysteresis`, `$sensor->sm2_hysteresis`
+  Returns the unsigned 3-bit (0–7) hysteresis applied to the state machine threshold.
+
+* `$sensor->sm1_routed_to_int2`, `$sensor->sm2_routed_to_int2`
+  Returns `true` if the state machine interrupt is routed to INT2 (otherwise INT1).
+
+* `$sensor->fifo_mode`
+  Returns the current `LIS3DSHFifoMode`.
+  Possible values: `BYPASS`, `FIFO`, `STREAM`, `STREAM_TO_FIFO`, `BYPASS_TO_STREAM`,
+  `BYPASS_TO_FIFO`.
+
+* `$sensor->fifo_watermark`
+  Returns the unsigned 5-bit (0–31) FIFO watermark pointer.
+
+* `$sensor->control_register1` … `$sensor->control_register6`
+  Reads and returns the full `LIS3DSHControlRegister1`…`LIS3DSHControlRegister6` data object.
+
+* `$sensor->fifo_control_register`
+  Reads and returns the full `LIS3DSHFifoControlRegister` data object.
+
+Writable Properties (Setters)
+-----------------------------
+
+* `$sensor->output_data_rate = LIS3DSHOutputDataRate::HZ400;`
+  Sets the output data rate and power mode.
+
+* `$sensor->block_data_update = true;`
+  Enables or disables block data update (prevents half-updated register reads).
+
+* `$sensor->x_axis_enabled = true;`
+  `$sensor->y_axis_enabled = true;`
+  `$sensor->z_axis_enabled = true;`
+  Enables or disables the respective axis.
+
+* `$sensor->full_scale = LIS3DSHFullScale::G4;`
+  Sets the full-scale measurement range.
+
+* `$sensor->anti_aliasing_bandwidth = LIS3DSHAntiAliasingBandwidth::HZ200;`
+  Sets the anti-aliasing filter bandwidth.
+
+* `$sensor->self_test = LIS3DSHSelfTest::POSITIVE;`
+  Sets the self-test mode.
+
+* `$sensor->spi_3wire_mode = true;`
+  Enables or disables 3-wire SPI mode.
+
+* `$sensor->data_ready_on_int1 = true;`
+  Routes or removes the DRDY signal from INT1.
+
+* `$sensor->interrupts_active_high = true;`
+  Sets interrupt signal polarity (active-high when `true`, active-low when `false`).
+
+* `$sensor->interrupts_pulsed = true;`
+  Sets interrupt signals to pulsed (`true`) or latched (`false`).
+
+* `$sensor->int1_enabled = true;`
+  `$sensor->int2_enabled = true;`
+  Enables or disables the INT1/INT2 output signal.
+
+* `$sensor->vector_filter_enabled = true;`
+  Enables or disables the vector filter.
+
+* `$sensor->soft_reset = true;`
+  Triggers a soft reset (CTRL_REG3 STRT power-on-reset function).
+
+* `$sensor->reboot = true;`
+  Forces a reboot of the trimming parameters (CTRL_REG6 BOOT). Self-clears when complete.
+
+* `$sensor->fifo_enabled = true;`
+  Enables or disables the FIFO buffer.
+
+* `$sensor->watermark_enabled = true;`
+  Enables or disables FIFO watermark level use.
+
+* `$sensor->address_auto_increment = true;`
+  Enables or disables sub-address auto-increment on multi-byte access. Leave enabled for
+  burst output reads.
+
+* `$sensor->int1_fifo_empty_enabled = true;`
+  Routes or removes the FIFO empty indication from INT1.
+
+* `$sensor->int1_fifo_watermark_enabled = true;`
+  Routes or removes the FIFO watermark interrupt from INT1.
+
+* `$sensor->int1_fifo_overrun_enabled = true;`
+  Routes or removes the FIFO overrun interrupt from INT1.
+
+* `$sensor->int2_boot_enabled = true;`
+  Routes or removes the BOOT interrupt from INT2.
+
+* `$sensor->sm1_enabled = true;`
+  `$sensor->sm2_enabled = true;`
+  Enables or disables state machine 1 / 2.
+
+* `$sensor->sm1_hysteresis = 3;`
+  `$sensor->sm2_hysteresis = 3;`
+  Sets the unsigned 3-bit (0–7) state machine threshold hysteresis.
+
+* `$sensor->sm1_routed_to_int2 = true;`
+  `$sensor->sm2_routed_to_int2 = true;`
+  Routes the state machine interrupt to INT2 (`true`) or INT1 (`false`).
+
+* `$sensor->fifo_mode = LIS3DSHFifoMode::STREAM;`
+  Sets the FIFO operating mode.
+
+* `$sensor->fifo_watermark = 16;`
+  Sets the unsigned 5-bit (0–31) FIFO watermark pointer.
+
+* `$sensor->control_register1 = new LIS3DSHControlRegister1(...);`
+  … through `$sensor->control_register6 = new LIS3DSHControlRegister6(...);`
+  Writes the full corresponding control register from a data object.
+
+* `$sensor->fifo_control_register = new LIS3DSHFifoControlRegister(...);`
+  Writes the full FIFO_CTRL register from a data object.
