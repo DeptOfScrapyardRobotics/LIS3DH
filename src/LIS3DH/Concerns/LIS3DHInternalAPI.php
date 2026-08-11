@@ -2,76 +2,67 @@
 
 namespace DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Concerns;
 
-use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\DataObjects\LIS3DHControlRegister1;
-use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\DataObjects\LIS3DHControlRegister4;
 use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Enums\LIS3DHDataRate;
+use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Enums\LIS3DHMode;
 use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Enums\LIS3DHOpCode;
-use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Enums\LIS3DHRange;
-use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Enums\LIS3DHReadRegister;
-use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DH\Enums\LIS3DHSelfTestOption;
+use DeptOfScrapyardRobotics\Sensors\LIS3Dx\LIS3DxException;
+use Fabricate\NutsAndBolts\Concerns\Splices16Bits;
+use GeneralPurposeIO\Contracts\Circuits\BootScaffolding;
 
 trait LIS3DHInternalAPI
 {
-    protected function initializeCtrlReg1(LIS3DHDataRate $rate): void
+    use BootScaffolding, Splices16Bits;
+
+    protected int $hardwired_device_id = 0x33;
+
+    protected function sendCommand(LIS3DHOpCode $register, array $command_data = []): int
     {
-        if ($this->data_rate != LIS3DHDataRate::POWER_DOWN) {
-            $this->control_register1 = new LIS3DHControlRegister1(
-                LIS3DHDataRate::POWER_DOWN,
-                false,
-                false,
-                false,
-                false,
-            );
+        return $this->transport->write($register->value, $command_data);
+    }
+
+    protected function readData(LIS3DHOpCode $register, int $length): array
+    {
+        return $this->transport->read($register->value, $length);
+    }
+
+    /**
+     * @throws LIS3DxException
+     */
+    protected function _boot(): void
+    {
+        $this->confirmDeviceId();
+        // Enable XYZ axes (normal / HR configured next).
+        $this->sendCommand(LIS3DHOpCode::CTRL1, [0x07]);
+        $this->setDataRate(LIS3DHDataRate::HZ400);
+        // High-res + BDU (Adafruit begin writes 0x88).
+        $this->sendCommand(LIS3DHOpCode::CTRL4, [0x88]);
+    }
+
+    /**
+     * @throws LIS3DxException
+     */
+    protected function confirmDeviceId(): void
+    {
+        if ($this->device_id != $this->hardwired_device_id) {
+            throw LIS3DxException::invalidChipId($this->device_id, $this->hardwired_device_id);
         }
-
-        if ($this->data_rate == LIS3DHDataRate::POWER_DOWN) {
-            $this->data_rate = $rate;
-            $this->z_axis_enabled = true;
-            $this->y_axis_enaled = true;
-            $this->x_axis_enabled = true;
-        }
     }
 
-    protected function initializeCtrlReg4(LIS3DHRange $range): void
+    /**
+     * Scale left-justified 16-bit sample to g (Adafruit x_g / y_g / z_g).
+     */
+    protected function calcLis3dhG(int $raw): float
     {
-        $new_register = new LIS3DHControlRegister4(
-            true,
-            false,
-            $range,
-            true,
-            LIS3DHSelfTestOption::DISABLED,
-            false,
-        );
-        $this->setControlRegister4($new_register);
-    }
+        $range = $this->getRange();
+        $mode = $this->getPerformanceMode();
+        $lsb = $range->baseLsbMg();
 
-    protected function initializeCtrlReg5(): void
-    {
-        // The only thing done to CTRL_REG5 is rebooting.
-        $this->reboot_memory_content = true;
-        usleep(5000);
-    }
+        $lsb = match ($mode) {
+            LIS3DHMode::HIGH_RESOLUTION => intdiv($lsb, 4),
+            LIS3DHMode::LOW_POWER => $lsb * 4,
+            default => $lsb,
+        };
 
-    protected function initializeTempConfigReg(): void
-    {
-        // The only thing done to CTRL_REG5 is to enable the ADC.
-        $this->adc_enabled = true;
-    }
-
-    protected function s16le(int $lsb, int $msb): int
-    {
-        $value = (($msb & 0xFF) << 8) | ($lsb & 0xFF);
-
-        return ($value & 0x8000) ? $value - 0x10000 : $value;
-    }
-
-    protected function write(LIS3DHOpCode $register_hex, array $command_data = []): ?int
-    {
-        return $this->carrier->write($register_hex->value, $command_data);
-    }
-
-    protected function read(LIS3DHReadRegister $register_hex, int $length): array
-    {
-        return $this->carrier->read($register_hex->value, $length);
+        return $lsb * ((float) $raw / $mode->lsb16Divisor());
     }
 }

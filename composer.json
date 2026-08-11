@@ -1,10 +1,12 @@
 {
     "name": "dept-of-scrapyard-robotics/lis3dx",
-    "description": "Drive LIS3DH and LIS3DSH motion sensors over I2C/SPI with PHP",
+    "description": "Drive LIS3DH & LIS3DSH accelerometers over I2C/SPI with PHP",
     "type": "library",
-    "version": "0.4.1",
+    "version": "0.7.0",
     "keywords": [
-        "framework",
+        "lis3dh",
+        "lis3dsh",
+        "accelerometer",
         "scrapyard-io"
     ],
     "license": "MIT",
@@ -16,16 +18,19 @@
         }
     ],
     "require": {
-        "php": "^8.3",
-        "scrapyard-io/waveforms": "^0.4.0",
-        "scrapyard-io/reality-interface": "^0.4.0",
-        "scrapyard-io/bare-metal": "^0.4.0"
+        "php": "^8.4|^8.5|^8.6",
+        "fabricate/nuts-and-bolts": "^0.7.0",
+        "gpio/circuits": "^0.7.0",
+        "gpio/contracts": "^0.7.0",
+        "gpio/digital": "^0.7.0",
+        "gpio/i2c": "^0.7.0",
+        "gpio/spi": "^0.7.0",
+        "waveforms/contracts": "^0.7.0"
     },
     "suggest": {
-        "scrapyard-io/gpio": "^0.4.0 - For direct linux-based GPIO",
-        "scrapyard-io/i2c": "^0.4.0 - For direct linux-based I2C",
-        "scrapyard-io/spi": "^0.4.0 - For direct linux-based SPI",
-        "scrapyard-io/mpsse": "^0.4.0 - For I2C/SPI/GPIO over an FTDI Serial-to-USB Device"
+        "microscrap/i2c": "^0.7.0 - POSIX I2C",
+        "microscrap/spi": "^0.7.0 - POSIX SPI",
+        "microscrap/mpsse": "^0.7.0 - I2C/SPI over FTDI MPSSE"
     },
     "autoload": {
         "psr-4": {
@@ -35,6 +40,16 @@
     "autoload-dev": {
         "psr-4": {
             "DeptOfScrapyardRobotics\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "0.7.x-dev"
+        },
+        "scrapyard-io": {
+            "providers": [
+                "DeptOfScrapyardRobotics\\Sensors\\LIS3Dx\\LIS3DxServiceProvider"
+            ]
         }
     },
     "config": {
